@@ -1,0 +1,96 @@
+---
+title: "Masking variable names"
+vignette: >
+  %\VignetteIndexEntry{Masking variable names}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{quarto::html}
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: '#>'
+editor_options: 
+  chunk_output_type: console
+---
+
+In certain studies, variable names should be masked to prevent researcher bias. Examples can include exploratory factor analysis, network analysis, etc. The `vazul` package provides means to mask variable names in a dataset, ensuring that analyses can be conducted without preconceived notions about the variables.
+
+```{r}
+#| label: setup
+#| message: false
+
+library(vazul)
+library(dplyr)
+library(stats)
+
+```
+
+In this example, we will use the `williams` dataset from the `{vazul}` package.
+
+```{r}
+data("williams", package = "vazul")
+
+head(williams)
+glimpse(williams)
+
+```
+
+We will apply masking to the variables related to life history strategy, which are prefixed with `SexUnres`, `Impuls`, `Opport`, `InvEdu`, and `InvChild`. We'll mask each variable group separately with randomized letter prefixes (e.g., `C_01`, `A_01`, `E_01`, etc.). This way, variables within the same original scale keep a common prefix for the analysis, but analysts won't know which prefix corresponds to which original scale due to the randomization.
+
+
+```{r}
+set.seed(84)
+
+# Sample 5 random letters for the 5 variable groups
+random_prefixes <- paste0(sample(LETTERS, 5), "_")
+
+masked_williams <-
+    williams |> 
+    mask_names(starts_with("SexUnres"), prefix = random_prefixes[1]) |>
+    mask_names(starts_with("Impul"), prefix = random_prefixes[2]) |>
+    mask_names(starts_with("Opport"), prefix = random_prefixes[3]) |>
+    mask_names(starts_with("InvEdu"), prefix = random_prefixes[4]) |>
+    mask_names(starts_with("InvChild"), prefix = random_prefixes[5])
+
+# Show the randomized prefixes used (but not which corresponds to which)
+sort(unique(sub("_.*", "_", grep("^[A-Z]_", names(masked_williams), value = TRUE))))
+```
+
+We can now perform an exploratory factor analysis (EFA) on the masked variables. Since the variable names are masked with randomized prefixes, we won't know which original variables correspond to which factor, thus preventing bias in interpreting the results.
+
+```{r}
+
+set.seed(123)
+efa_blind <-
+    masked_williams |> 
+    select(matches("^[A-Z]_")) |>
+    factanal(factors = 5, rotation = "varimax")
+    
+# Get the loadings of the EFA on the masked data
+efa_blind |> 
+    loadings() |> 
+    print(cutoff = 0.3, sort = TRUE)
+
+```
+
+The loading table shows that factors are not necessarily loading to their original category. By using masking, researchers may be able to make decisions without being biased on the variable names.
+
+Applying the same analysis on the original dataset reveals the names of the variables. Please note that the loadings may differ slightly due to the randomness in the factor analysis process.
+
+```{r}
+set.seed(123)
+efa_orig <-
+    williams |> 
+    select(SexUnres_1:InvChild_2_r) |>
+    factanal(factors = 5, rotation = "varimax")
+
+# Get the loadings of the EFA on the original data
+
+efa_orig |> 
+    loadings() |> 
+    print(cutoff = 0.3, sort = TRUE)
+
+```
+
+
+
+
