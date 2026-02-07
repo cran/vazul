@@ -3,8 +3,6 @@
 export(mask_labels)
 export(mask_names)
 export(mask_variables)
-export(mask_variables_rowwise)
 export(scramble_values)
 export(scramble_variables)
-export(scramble_variables_rowwise)
 importFrom(lifecycle,deprecated)

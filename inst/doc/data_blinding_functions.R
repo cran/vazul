@@ -11,7 +11,7 @@ library(dplyr)
 treatment <- c("control", "treatment", "control", "treatment", "control")
 
 # Mask the labels
-set.seed(123)
+set.seed(1037)
 masked_treatment <- mask_labels(treatment)
 masked_treatment
 
@@ -67,26 +67,13 @@ df2 <- data.frame(
 
 set.seed(456)
 result_shared <- mask_variables(df2, c("pre_condition", "post_condition"),
-                                across_variables = TRUE)
+                                .across_variables = TRUE)
 result_shared
 
 
 ## -----------------------------------------------------------------------------
 set.seed(789)
 mask_variables(df, where(is.character))
-
-
-## -----------------------------------------------------------------------------
-df <- data.frame(
-  treat_1 = c("control", "treatment", "placebo"),
-  treat_2 = c("treatment", "placebo", "control"),
-  treat_3 = c("placebo", "control", "treatment"),
-  id = 1:3
-)
-
-set.seed(123)
-result <- mask_variables_rowwise(df, starts_with("treat_"))
-result
 
 
 ## -----------------------------------------------------------------------------
@@ -111,9 +98,12 @@ scramble_values(conditions)
 
 
 ## -----------------------------------------------------------------------------
-set.seed(100)
+set.seed(1037)
 original <- c(1, 2, 2, 3, 3, 3, 4, 4, 4, 4)
 scrambled <- scramble_values(original)
+
+# The scrambled vector has the same values, just in a different order 
+scrambled
 
 # Same values, different order
 sort(original) == sort(scrambled)
@@ -121,20 +111,6 @@ sort(original) == sort(scrambled)
 # Same frequency distribution
 table(original)
 table(scrambled)
-
-
-## -----------------------------------------------------------------------------
-data(williams)
-
-set.seed(42)
-williams$age_scrambled <- scramble_values(williams$age)
-
-# The values are the same, just reordered
-summary(williams$age)
-summary(williams$age_scrambled)
-
-# But individual correspondences are broken
-head(williams[c("subject", "age", "age_scrambled")], 10)
 
 
 ## -----------------------------------------------------------------------------
@@ -150,7 +126,7 @@ scramble_variables(df, c("x", "y"))
 
 ## -----------------------------------------------------------------------------
 set.seed(456)
-scramble_variables(df, c("x", "y"), together = TRUE)
+scramble_variables(df, c("x", "y"), .together = TRUE)
 
 
 ## -----------------------------------------------------------------------------
@@ -160,7 +136,7 @@ scramble_variables(df, "x", .groups = "group")
 
 ## -----------------------------------------------------------------------------
 set.seed(100)
-scramble_variables(df, c("x", "y"), .groups = "group", together = TRUE)
+scramble_variables(df, c("x", "y"), .groups = "group", .together = TRUE)
 
 
 ## -----------------------------------------------------------------------------
@@ -190,7 +166,7 @@ df <- data.frame(
 )
 
 set.seed(123)
-result <- scramble_variables_rowwise(df, c("item1", "item2", "item3"))
+result <- scramble_variables(df, c("item1", "item2", "item3"), .byrow = TRUE)
 result
 
 
@@ -205,15 +181,15 @@ df2 <- data.frame(
 )
 
 set.seed(2)
-result2 <- scramble_variables_rowwise(df2, starts_with("day_"), starts_with("score_"))
+result2 <- scramble_variables(df2, starts_with("day_"), starts_with("score_"), .byrow = TRUE)
 result2
 
 
 ## -----------------------------------------------------------------------------
 set.seed(42)
 result3 <- df2 |>
-  scramble_variables_rowwise(starts_with("day_")) |>
-  scramble_variables_rowwise(starts_with("score_"))
+  scramble_variables(starts_with("day_"), .byrow = TRUE) |>
+  scramble_variables(starts_with("score_"), .byrow = TRUE)
 result3
 
 

@@ -25,7 +25,7 @@ Each approach is available at three levels:
 
 - **Vector level**: `mask_labels()` and `scramble_values()` - operate on single vectors
 - **Data frame level**: `mask_variables()` and `scramble_variables()` - operate on columns in a data frame
-- **Row-wise level**: `mask_variables_rowwise()` and `scramble_variables_rowwise()` - operate within rows across columns
+- **Row-wise level**: `scramble_variables(..., .byrow = TRUE)` - operates within rows across columns
 
 ```{r}
 #| label: setup
@@ -55,7 +55,7 @@ The `mask_labels()` function takes a character or factor vector and replaces eac
 treatment <- c("control", "treatment", "control", "treatment", "control")
 
 # Mask the labels
-set.seed(123)
+set.seed(1037)
 masked_treatment <- mask_labels(treatment)
 masked_treatment
 ```
@@ -118,7 +118,7 @@ The `mask_variables()` function applies masking to multiple columns in a data fr
 
 - `data`: A data frame
 - `...`: Columns to mask (supports tidyselect helpers)
-- `across_variables`: If `TRUE`, all selected variables share the same masked labels; if `FALSE` (default), each variable gets independent masked labels
+- `.across_variables`: If `TRUE`, all selected variables share the same masked labels; if `FALSE` (default), each variable gets independent masked labels
 
 #### Independent Masking (Default)
 
@@ -140,7 +140,7 @@ Notice that each column now has its own prefix (`treatment_group_`, `outcome_gro
 
 #### Shared Masking Across Variables
 
-When `across_variables = TRUE`, all selected columns share the same mapping:
+When `.across_variables = TRUE`, all selected columns share the same mapping:
 
 ```{r}
 df2 <- data.frame(
@@ -151,7 +151,7 @@ df2 <- data.frame(
 
 set.seed(456)
 result_shared <- mask_variables(df2, c("pre_condition", "post_condition"),
-                                across_variables = TRUE)
+                                .across_variables = TRUE)
 result_shared
 ```
 
@@ -165,33 +165,6 @@ You can use tidyselect helpers to select columns:
 set.seed(789)
 mask_variables(df, where(is.character))
 ```
-
-### `mask_variables_rowwise()` - Row-Level Masking
-
-The `mask_variables_rowwise()` function applies consistent masking within each row across multiple columns. This is useful when you have repeated measures or matched conditions.
-
-#### Parameters
-
-- `data`: A data frame
-- `...`: Column sets to mask (supports tidyselect helpers)
-- `prefix`: Character string to use as prefix for masked labels (default: `"masked_group_"`)
-
-#### Example: Masking Repeated Conditions
-
-```{r}
-df <- data.frame(
-  treat_1 = c("control", "treatment", "placebo"),
-  treat_2 = c("treatment", "placebo", "control"),
-  treat_3 = c("placebo", "control", "treatment"),
-  id = 1:3
-)
-
-set.seed(123)
-result <- mask_variables_rowwise(df, starts_with("treat_"))
-result
-```
-
-Within each row, the original values are consistently mapped to masked labels, but the mapping is independent across rows.
 
 ## Scrambling Functions
 
@@ -237,9 +210,12 @@ Scrambling preserves:
 - The distribution of values
 
 ```{r}
-set.seed(100)
+set.seed(1037)
 original <- c(1, 2, 2, 3, 3, 3, 4, 4, 4, 4)
 scrambled <- scramble_values(original)
+
+# The scrambled vector has the same values, just in a different order 
+scrambled
 
 # Same values, different order
 sort(original) == sort(scrambled)
@@ -247,22 +223,6 @@ sort(original) == sort(scrambled)
 # Same frequency distribution
 table(original)
 table(scrambled)
-```
-
-#### Practical Example with Dataset
-
-```{r}
-data(williams)
-
-set.seed(42)
-williams$age_scrambled <- scramble_values(williams$age)
-
-# The values are the same, just reordered
-summary(williams$age)
-summary(williams$age_scrambled)
-
-# But individual correspondences are broken
-head(williams[c("subject", "age", "age_scrambled")], 10)
 ```
 
 ### `scramble_variables()` - Scramble Data Frame Columns
@@ -273,7 +233,7 @@ The `scramble_variables()` function scrambles the values of specified columns in
 
 - `data`: A data frame
 - `...`: Columns to scramble (supports tidyselect helpers)
-- `together`: If `TRUE`, variables are scrambled together as a unit per row; if `FALSE` (default), each variable is scrambled independently
+- `.together`: If `TRUE`, variables are scrambled together as a unit per row; if `FALSE` (default), each variable is scrambled independently
 - `.groups`: Optional grouping columns for within-group scrambling. Grouping columns must not overlap with the columns selected in `...`. If `data` is already grouped (a `dplyr` grouped data frame), existing grouping is ignored unless `.groups` is explicitly provided.
 
 #### Independent Scrambling (Default)
@@ -295,11 +255,11 @@ Notice that `x` and `y` are scrambled independently of each other.
 
 #### Scrambling Together
 
-When `together = TRUE`, the selected columns are scrambled as a unit, preserving row-level relationships:
+When `.together = TRUE`, the selected columns are scrambled as a unit, preserving row-level relationships:
 
 ```{r}
 set.seed(456)
-scramble_variables(df, c("x", "y"), together = TRUE)
+scramble_variables(df, c("x", "y"), .together = TRUE)
 ```
 
 Notice that the pairs (1, "a"), (2, "b"), etc., remain intact but are assigned to different rows.
@@ -321,7 +281,7 @@ You can combine both parameters:
 
 ```{r}
 set.seed(100)
-scramble_variables(df, c("x", "y"), .groups = "group", together = TRUE)
+scramble_variables(df, c("x", "y"), .groups = "group", .together = TRUE)
 ```
 
 #### Practical Example with Dataset
@@ -344,14 +304,15 @@ williams_scrambled |>
   summarise(mean_age = mean(age, na.rm = TRUE))
 ```
 
-### `scramble_variables_rowwise()` - Row-Level Scrambling
+### `scramble_variables(..., .byrow = TRUE)` - Row-Level Scrambling
 
-The `scramble_variables_rowwise()` function scrambles values within each row across specified columns. This is useful for scrambling repeated measures or item responses.
+The `scramble_variables(..., .byrow = TRUE)` function scrambles values within each row across specified columns. This is useful for scrambling repeated measures or item responses.
 
 #### Parameters
 
 - `data`: A data frame
 - `...`: Columns to scramble (supports tidyselect helpers). All selections are combined into a single set and scrambled together. If you want to scramble separate groups of columns independently, call the function multiple times.
+- `.byrow`: Must be set to `TRUE` for row-wise scrambling.
   
 Rowwise scrambling moves values between columns, so selected columns must be type-compatible. This function requires all selected columns to have the same class (or be an integer/double mix). For factors, the selected columns must also have identical levels.
 
@@ -366,7 +327,7 @@ df <- data.frame(
 )
 
 set.seed(123)
-result <- scramble_variables_rowwise(df, c("item1", "item2", "item3"))
+result <- scramble_variables(df, c("item1", "item2", "item3"), .byrow = TRUE)
 result
 ```
 
@@ -387,7 +348,7 @@ df2 <- data.frame(
 )
 
 set.seed(2)
-result2 <- scramble_variables_rowwise(df2, starts_with("day_"), starts_with("score_"))
+result2 <- scramble_variables(df2, starts_with("day_"), starts_with("score_"), .byrow = TRUE)
 result2
 ```
 
@@ -398,8 +359,8 @@ To scramble different groups of columns independently, call the function multipl
 ```{r}
 set.seed(42)
 result3 <- df2 |>
-  scramble_variables_rowwise(starts_with("day_")) |>
-  scramble_variables_rowwise(starts_with("score_"))
+  scramble_variables(starts_with("day_"), .byrow = TRUE) |>
+  scramble_variables(starts_with("score_"), .byrow = TRUE)
 result3
 ```
 
@@ -527,9 +488,8 @@ The `vazul` package provides a comprehensive toolkit for data blinding:
 |----------|-------|---------|
 | `mask_labels()` | Vector | Replace categorical values with anonymous labels |
 | `mask_variables()` | Data frame | Mask multiple columns |
-| `mask_variables_rowwise()` | Row-wise | Consistent masking within rows |
 | `scramble_values()` | Vector | Randomize value order |
 | `scramble_variables()` | Data frame | Scramble multiple columns |
-| `scramble_variables_rowwise()` | Row-wise | Scramble values within rows |
+| `scramble_variables(..., .byrow = TRUE)` | Row-wise | Scramble values within rows |
 
 These functions help researchers conduct unbiased analyses by separating the analyst from knowledge about treatment conditions, group assignments, or individual data points.
