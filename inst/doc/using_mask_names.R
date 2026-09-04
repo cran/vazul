@@ -50,6 +50,62 @@ efa_blind |>
 
 
 ## -----------------------------------------------------------------------------
+set.seed(84)
+masked_with_suffix <-
+    williams |>
+    mask_names(starts_with("SexUnres"), prefix = "C_", keep_suffixes = "_r")
+
+masked_with_suffix |>
+    select(matches("^C_")) |>
+    names()
+
+
+## -----------------------------------------------------------------------------
+#| message: false
+library(tidyr)
+
+wide_demo <- data.frame(
+  id = 1:4,
+  exp_pre = c(10, 12, 9, 11),
+  exp_post = c(15, 14, 13, 16),
+  ctl_pre = c(8, 9, 10, 7),
+  ctl_post = c(9, 10, 11, 8)
+)
+wide_demo
+
+
+## -----------------------------------------------------------------------------
+# 1) Reshape to long format, splitting the column names into
+#    a `condition` and a `time` variable
+long_demo <- wide_demo |>
+  pivot_longer(
+    cols = -id,
+    names_to = c("condition", "time"),
+    names_sep = "_"
+  )
+long_demo
+
+
+## -----------------------------------------------------------------------------
+# 2) Mask the condition and time variables. Each variable keeps its own,
+#    internally consistent mapping (every "exp" becomes the same masked
+#    label, every "pre" becomes the same masked label, and so on).
+set.seed(2024)
+long_masked <- long_demo |>
+  mask_variables(condition, time)
+
+long_masked |>
+  count(condition, time)
+
+
+## -----------------------------------------------------------------------------
+# 3) Reshape back to wide format if a wide layout is needed for analysis
+long_masked |>
+  unite(masked_name, condition, time) |>
+  pivot_wider(names_from = masked_name, values_from = value)
+
+
+## -----------------------------------------------------------------------------
 set.seed(123)
 efa_orig <-
     williams |> 
